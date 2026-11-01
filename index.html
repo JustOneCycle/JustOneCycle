@@ -66,7 +66,7 @@ tm=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),
 mv=(a,i,d)=>{const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]]},
 toast=m=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3800)};
 const MEALS=[['b','Frühstück'],['l','Mittagessen'],['d','Abendessen'],['s','Snacks']],mealName=k=>MEALS.find(m=>m[0]===k)[1];
-const DEF={cut:0,lock:0,goals:{k:2400,p:150,c:250,f:70,fi:30,s:50},rest:90,foods:[],days:{},plans:[],workouts:[],active:null};
+const DEF={cut:0,goals:{k:2400,p:150,c:250,f:70,fi:30,s:50},rest:90,foods:[],days:{},plans:[],workouts:[],active:null};
 let S=(()=>{try{return Object.assign({},DEF,JSON.parse(localStorage.getItem('joc1'))||{})}catch(e){return JSON.parse(JSON.stringify(DEF))}})();
 const save=()=>{try{localStorage.setItem('joc1',JSON.stringify(S))}catch(e){toast('Speichern nicht möglich')}};
 const tdy=()=>ymd(new Date(Date.now()-(S.cut||0)*36e5));
@@ -91,7 +91,7 @@ const shd=n=>{const d=pd(U.date);d.setDate(d.getDate()+n);U.date=ymd(d);U.fl=isT
 const exNames=()=>[...new Set([...S.plans.flatMap(p=>p.ex),...S.workouts.flatMap(w=>w.ex.map(e=>e.n))])];
 const last=n=>{for(const w of S.workouts){const e=w.ex.find(x=>x.n===n);if(e&&e.sets.length)return e.sets}return null};
 const mkEx=n=>({n,sets:Array.from({length:(last(n)||[1,1,1]).length},()=>({w:'',r:'',d:0}))});
-const startW=p=>{if(S.active)return toast('Es läuft bereits ein Workout');S.active={id:uid(),n:p?p.n:'Freies Training',start:Date.now(),ex:(p?p.ex:[]).map(mkEx)};U.rest=null;U.sheet=null;save();lockOn()};
+const startW=p=>{if(S.active)return toast('Es läuft bereits ein Workout');S.active={id:uid(),n:p?p.n:'Freies Training',start:Date.now(),ex:(p?p.ex:[]).map(mkEx)};U.rest=null;U.sheet=null;save()};
 const wcard=w=>`<div class=card data-a=wd data-id=${w.id}><h3><span>${esc(w.n)}</span><small>${dl(w.start)}</small></h3><small>${dur(w.end-w.start)} Std. · ${w.ex.length} Übungen · ${w.ex.reduce((a,e)=>a+e.sets.length,0)} Sätze</small></div>`;
 const vH=()=>`<button class=btn data-a=sw>Workout starten</button><div style="height:14px"></div>${S.workouts.length?S.workouts.map(wcard).join(''):'<p class=mu>Noch keine Workouts gespeichert.</p>'}`;
 const vP=()=>`<button class=btn data-a=np>+ Neuer Plan</button><div style="height:14px"></div>${S.plans.length?S.plans.map((p,i)=>`<div class=card><h3><span>${esc(p.n)}</span><span><button class=lnk data-a=pu data-i=${i}>↑</button><button class=lnk data-a=pdn data-i=${i}>↓</button></span></h3><small>${p.ex.length} Übungen${p.ex.length?': '+esc(p.ex.join(', ')):''}</small><div class=bt2><button class="btn sm" data-a=sp data-id=${p.id}>Start</button><button class="btn s sm" data-a=ep data-id=${p.id}>Bearbeiten</button><button class="btn s sm" data-a=dup data-id=${p.id}>Duplizieren</button></div></div>`).join(''):'<p class=mu>Noch keine Trainingspläne.</p>'}`;
@@ -101,14 +101,14 @@ const dw=U.cd?S.workouts.filter(w=>ymd(new Date(w.start))===U.cd):[];
 return`<div class=card><h3><button class=lnk data-a=cmv data-v=-1>‹</button><span>${c.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</span><button class=lnk data-a=cmv data-v=1>›</button></h3><div class=cal>${g}</div></div>${U.cd?(dw.length?dw.map(wcard).join(''):'<p class=mu>Kein Training an diesem Tag.</p>'):''}`};
 const vPr=()=>{const W=S.workouts,tt=W.reduce((a,w)=>a+(w.end-w.start),0),days=new Set(W.map(w=>ymd(new Date(w.start)))),lg=Math.max(0,...W.map(w=>w.end-w.start)),wk=W.length?Math.max(1,(Date.now()-Math.min(...W.map(w=>w.start)))/6048e5):0,now=new Date(),mo=W.filter(w=>{const d=new Date(w.start);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}).length,P=prs(),pk=Object.keys(P);
 const tile=(v,l)=>`<div class=card><b>${v}</b><small>${l}</small></div>`;
-return`<div class=tiles>${tile(W.length,'Workouts')}${tile(Math.floor(tt/36e5)+' h '+Math.floor(tt%36e5/6e4)+' min','Trainingszeit')}${tile(days.size,'Trainingstage')}${tile(pk.length,'Rekorde (Übungen)')}${tile(f1(wk?W.length/wk:0),'Ø Workouts / Woche')}${tile(mo,'Diesen Monat')}${tile(dur(lg),'Längstes Workout')}</div>`+vCal()+`<div class=card><h3>Persönliche Rekorde</h3>${pk.length?pk.map(n=>`<div class=row><div class=g><div class=n>${esc(n)}</div><small>Beste Wdh.: ${P[n].r}</small></div><b>🏆 ${P[n].w} kg × ${P[n].wr}</b></div>`).join(''):'<small>Rekorde entstehen aus deinen gespeicherten Workouts.</small>'}</div><div class=card><label class=fl><small>Standard-Pausenzeit (Sekunden)</small><input id=rsd inputmode=numeric value="${S.rest}"></label><label class=fl><small>Zeit auf dem Sperrbildschirm anzeigen (experimentell)</small><select id=lks><option value=0 ${S.lock?'':'selected'}>Aus</option><option value=1 ${S.lock?'selected':''}>An</option></select></label><small>Spielt unhörbar einen Ton ab und zeigt die Trainingszeit in den Mediensteuerungen. Das unterbricht laufende Musik.</small></div>`};
+return`<div class=tiles>${tile(W.length,'Workouts')}${tile(Math.floor(tt/36e5)+' h '+Math.floor(tt%36e5/6e4)+' min','Trainingszeit')}${tile(days.size,'Trainingstage')}${tile(pk.length,'Rekorde (Übungen)')}${tile(f1(wk?W.length/wk:0),'Ø Workouts / Woche')}${tile(mo,'Diesen Monat')}${tile(dur(lg),'Längstes Workout')}</div>`+vCal()+`<div class=card><h3>Persönliche Rekorde</h3>${pk.length?pk.map(n=>`<div class=row><div class=g><div class=n>${esc(n)}</div><small>Beste Wdh.: ${P[n].r}</small></div><b>🏆 ${P[n].w} kg × ${P[n].wr}</b></div>`).join(''):'<small>Rekorde entstehen aus deinen gespeicherten Workouts.</small>'}</div><div class=card><label class=fl><small>Standard-Pausenzeit (Sekunden)</small><input id=rsd inputmode=numeric value="${S.rest}"></label></div>`};
 
 /* ---------- aktives Workout ---------- */
 const rleft=()=>{const r=U.rest;return r.p?r.left:Math.max(0,Math.ceil((r.end-Date.now())/1000))};
 const rtxt=()=>{const l=rleft();return l<=0?'Los!':dur(l*1000)};
 const restBar=()=>U.rest?`<div class=rb><div class=wrap><div><small>Pause</small><div class=t id=rt>${rtxt()}</div></div><button class="btn s sm" data-a=rm>−15</button><button class="btn s sm" data-a=rp>${U.rest.p?'▶':'❚❚'}</button><button class="btn s sm" data-a=rpl>+15</button><button class="btn s sm" data-a=rs>Skip</button><button class="btn s sm" data-a=rr>↺</button></div></div>`:'';
 const exCard=(e,i)=>{const L=last(e.n);return`<div class=card><h3><span>${esc(e.n)}</span><button class=lnk data-a=rx data-i=${i}>Entfernen</button></h3><small>${L?'Letztes Training: '+L.map(s=>s.w+' kg × '+s.r).join(' · '):'Noch kein Training gespeichert'}</small><div class=sr style="margin-top:10px"><small>Satz</small><small>kg</small><small>Wdh.</small><small></small></div>${e.sets.map((s,j)=>`<div class=sr><b>${j+1}</b><input inputmode=decimal data-s="${i},${j},w" value="${esc(s.w)}" placeholder="${L&&L[j]?L[j].w:'0'}"><input inputmode=numeric data-s="${i},${j},r" value="${esc(s.r)}" placeholder="${L&&L[j]?L[j].r:'0'}"><button class="ck ${s.d?'d':''}" data-a=ck data-i=${i} data-j=${j} aria-label="Satz abschließen">✓</button></div>`).join('')}<div class=bt2 style="margin-top:4px"><button class="btn s sm" data-a=as data-i=${i}>+ Satz</button><button class="btn s sm" data-a=ds data-i=${i}>− Satz</button></div></div>`};
-const vA=()=>{const a=S.active,on=LA&&!LA.paused;return`<div class=wrap><div class=card><small>${esc(a.n)}</small><div class=wt id=wt>${dur(Date.now()-a.start)}</div><div class=bt2><button class="btn sm" data-a=et>⏱ Zeit ändern</button><button class="btn s sm" data-a=fin>Training beenden</button></div>${on?'<small style="display:block;margin-top:10px">Sperrbildschirm-Anzeige aktiv</small>':'<div class=bt2><button class="btn s sm" data-a=lk>Zeit auf Sperrbildschirm zeigen (experimentell)</button></div>'}<small style="display:block;margin-top:10px">Du kannst jederzeit unten zur Ernährung wechseln. Das Training läuft weiter.</small></div>${a.ex.map(exCard).join('')}<button class="btn s" style="margin-bottom:14px" data-a=aex>+ Übung hinzufügen</button><button class="btn r" data-a=cw>Workout abbrechen</button></div>`};
+const vA=()=>{const a=S.active;return`<div class=wrap><div class=card><small>${esc(a.n)}</small><div class=wt id=wt>${dur(Date.now()-a.start)}</div><div class=bt2><button class="btn sm" data-a=et>⏱ Zeit ändern</button><button class="btn s sm" data-a=fin>Training beenden</button></div><small style="display:block;margin-top:10px">Du kannst jederzeit unten zur Ernährung wechseln. Das Training läuft weiter.</small></div>${a.ex.map(exCard).join('')}<button class="btn s" style="margin-bottom:14px" data-a=aex>+ Übung hinzufügen</button><button class="btn r" data-a=cw>Workout abbrechen</button></div>`};
 const miniBar=()=>S.active&&U.tab!=='t'?`<div class=mb><div><small>Training läuft</small><div class=t id=wt2>${dur(Date.now()-S.active.start)}</div></div><button class="btn s sm" data-a=et>Zeit ändern</button><button class="btn sm" data-a=gt>Zum Training</button></div>`:'';
 
 /* ---------- Sheets ---------- */
@@ -233,23 +233,17 @@ loadX();
 /* ---------- Zeiten, Sperrbildschirm ---------- */
 const hm=(a,b,m,l)=>`<div class=fl><small>${l}</small><div style="display:flex;gap:8px;align-items:center"><input id=${a} inputmode=numeric value="${Math.floor(m/60)}"><span>Std</span><input id=${b} inputmode=numeric value="${m%60}"><span>Min</span></div></div>`;
 const lt=t=>{const d=new Date(t);return ymd(d)+'T'+p2(d.getHours())+':'+p2(d.getMinutes())};
-const wav=()=>{const n=8000,b=new Uint8Array(44+n),v=new DataView(b.buffer),w=(o,t)=>[...t].forEach((c,i)=>b[o+i]=c.charCodeAt(0));w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,'data');v.setUint32(40,n,true);b.fill(128,44);let t='';b.forEach(x=>t+=String.fromCharCode(x));return'data:audio/wav;base64,'+btoa(t)};
-let LA=null;
-function lockTick(){if(!S.active||!LA)return;const ms=Date.now()-S.active.start;if('mediaSession' in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:'Training läuft – '+dur(ms),artist:S.active.n,album:'JustOneCycle'});navigator.mediaSession.playbackState='playing';navigator.mediaSession.setPositionState({duration:43200,position:Math.min(ms/1000,43200),playbackRate:1})}catch(e){}}}
-function lockOn(){if(!S.lock||!S.active)return;try{if(!LA){LA=new Audio(wav());LA.loop=true}const p=LA.play();if(p&&p.then)p.then(lockTick).catch(()=>{})}catch(e){}}
-function lockOff(){try{if(LA){LA.pause();LA=null}if('mediaSession' in navigator){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState='none'}}catch(e){}}
 Object.assign(A,{
 dd:()=>{U.sheet={t:'dd'}},ddg:()=>{const v=$('#ddv').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return toast('Bitte ein Datum wählen'),0;U.date=v;U.fl=isT();U.sheet=null},
 et:()=>{U.sheet={t:'et',m0:Math.round((Date.now()-S.active.start)/6e4)}},
 ets:()=>{const a=S.active,dv=Math.round(nm($('#etH').value)*60+nm($('#etM').value));let st;if(dv!==U.sheet.m0){if(dv<1||dv>4320)return toast('Dauer: 1 Minute bis 72 Stunden'),0;st=Date.now()-dv*6e4}else{st=new Date($('#etS').value).getTime();if(!isFinite(st)||st>Date.now())return toast('Startzeit ungültig oder in der Zukunft'),0}a.start=st;save();U.sheet=null},
 we:d=>{const w=S.workouts.find(x=>x.id===d.id);U.sheet={t:'we',id:d.id,m0:Math.round((w.end-w.start)/6e4)}},
 wes:d=>{const w=S.workouts.find(x=>x.id===d.id),dv=Math.round(nm($('#weH').value)*60+nm($('#weM').value)),st=new Date($('#weS').value).getTime();let en=new Date($('#weE').value).getTime();if(dv!==U.sheet.m0)en=st+dv*6e4;if(!isFinite(st)||!isFinite(en)||en<=st||en-st>2592e5)return toast('Zeiten ungültig (Ende nach Start, maximal 72 Stunden)'),0;w.start=st;w.end=en;save();U.sheet={t:'wd',id:d.id}},
-lk:()=>{S.lock=1;save();lockOn()},
 bpick:d=>{U.sheet={t:'pick',food:U.bh[+d.i],m:U.sheet.m}},
 bcm:()=>{const c=$('#bcn').value.replace(/\D/g,'');if(c.length<8||c.length>14)return toast('Ein Barcode hat 8 bis 13 Ziffern'),0;if(U.busy)return 0;U.busy=1;stopScan().then(()=>lookup(c)).finally(()=>{U.busy=0;R()});return 0}});
 
 /* ---------- Rendern & Events ---------- */
-function R(){const y=window.scrollY;let h;if(U.sc&&!(U.sheet&&U.sheet.t==='scan'))stopScan();if(!S.active&&LA)lockOff();
+function R(){const y=window.scrollY;let h;if(U.sc&&!(U.sheet&&U.sheet.t==='scan'))stopScan();
 h=U.tab==='n'?'<h1>Ernährung</h1>'+vN():(S.active?'<h1>Training läuft</h1>'+vA():`<h1>Training</h1><div class=seg>${[['h','Verlauf'],['p','Pläne'],['r','Profil']].map(([k,t])=>`<button class="${U.sub===k?'on':''}" data-a=sub data-v=${k}>${t}</button>`).join('')}</div>${U.sub==='h'?vH():U.sub==='p'?vP():vPr()}`);
 h+=`<div class=bot>${S.active?miniBar()+restBar():''}<nav class=tb><button class="${U.tab==='n'?'on':''}" data-a=tab data-v=n><b>🍽️</b>Ernährung</button><button class="${U.tab==='t'?'on':''}" data-a=tab data-v=t><b>🏋️</b>Training</button></nav></div>`;
 if(U.sheet)h+=sheetHtml();
@@ -261,10 +255,9 @@ if(t.dataset.s&&S.active){const[i,j,k]=t.dataset.s.split(',');S.active.ex[i].set
 else if(t.id==='q'){U.sheet.q=t.value;$('#fl').innerHTML=fl()}
 else if(t.id==='xq'){U.sheet.q=t.value;$('#xl').innerHTML=xl()}
 else if(t.id==='am'&&U.sheet&&U.sheet.t==='pick'){$('#pv').textContent=f0((U.sheet.food||food(U.sheet.id)).k*nm(t.value)/100)+' kcal'}
-else if(t.id==='rsd'){S.rest=Math.max(10,Math.round(nm(t.value))||90);save()}
-else if(t.id==='lks'){S.lock=+t.value;save()}});
+else if(t.id==='rsd'){S.rest=Math.max(10,Math.round(nm(t.value))||90);save()}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='q'&&U.sheet&&U.sheet.t==='add'){e.preventDefault();A.os();R()}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&U.fl&&!isT()){U.date=tdy();R()}});
-setInterval(()=>{if(S.active){const t=dur(Date.now()-S.active.start);if($('#wt'))$('#wt').textContent=t;if($('#wt2'))$('#wt2').textContent=t;document.title=t+' · JustOneCycle'}else if(document.title!=='JustOneCycle')document.title='JustOneCycle';if(U.rest&&$('#rt'))$('#rt').textContent=rtxt();if(LA&&!LA.paused)lockTick();if(U.fl&&U.tab==='n'&&!S.active&&!U.sheet&&!isT()){U.date=tdy();R()}},500);
+setInterval(()=>{if(S.active){const t=dur(Date.now()-S.active.start);if($('#wt'))$('#wt').textContent=t;if($('#wt2'))$('#wt2').textContent=t}if(U.rest&&$('#rt'))$('#rt').textContent=rtxt();if(U.fl&&U.tab==='n'&&!S.active&&!U.sheet&&!isT()){U.date=tdy();R()}},500);
 R();
 </script></body></html>
